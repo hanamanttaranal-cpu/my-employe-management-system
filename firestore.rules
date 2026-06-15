@@ -1,0 +1,80 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // 1. Global Safety Net Catch-All
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // 3. Global Helpers
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function getUserData(userId) {
+      return get(/databases/$(database)/documents/users/$(userId)).data;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        request.auth.token.email == "myname@1.com" ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+         getUserData(request.auth.uid).isAdmin == true)
+      );
+    }
+
+    // Validation definitions
+    function isValidUser(data) {
+      return data.uid is string && data.uid.size() > 0 &&
+             data.name is string && data.name.size() > 0 && data.name.size() <= 200 &&
+             data.email is string && data.email.size() > 0 && data.email.size() <= 200 &&
+             data.role is string && data.role.size() > 0 && data.role.size() <= 100 &&
+             data.salary is number && data.salary >= 0 &&
+             data.salaryStatus in ["Paid", "Pending", "Processing"];
+    }
+
+    function isValidRole(data) {
+      return data.id is string && data.id.size() > 0 && data.id.size() <= 100 &&
+             data.roleName is string && data.roleName.size() > 0 && data.roleName.size() <= 100;
+    }
+
+    // 4. Matches for Collections
+    match /users/{userId} {
+      // Employees can read their own data, Admins can read all elements.
+      allow read: if isSignedIn() && (request.auth.uid == userId || isAdmin());
+
+      // Create profile: Anyone authenticated can create their OWN starting profile (cannot make themselves admin)
+      // or an Admin can create profiles for others.
+      allow create: if isSignedIn() && (
+        (request.auth.uid == userId && isValidUser(request.resource.data) && (!request.resource.data.keys().hasAll(["isAdmin"]) || request.resource.data.isAdmin == false)) ||
+        isAdmin()
+      );
+
+      // Update rules:
+      // Admins are granted all updates.
+      // Regular employees can only update non-payroll, non-privileged credentials (e.g., name, minor details) and CANNOT change roles/salaries.
+      allow update: if isSignedIn() && (
+        isAdmin() || (
+          request.auth.uid == userId &&
+          isValidUser(request.resource.data) &&
+          request.resource.data.isAdmin == resource.data.isAdmin &&
+          request.resource.data.role == resource.data.role &&
+          request.resource.data.salary == resource.data.salary &&
+          request.resource.data.salaryStatus == resource.data.salaryStatus
+        )
+      );
+
+      // Delete rules: Only admin can delete employees.
+      allow delete: if isAdmin();
+    }
+
+    match /roles/{roleId} {
+      // All authenticated employees can view roles (e.g., for selection at sign-up)
+      allow read: if isSignedIn();
+
+      // Only administrators can create or alter roles.
+      allow write: if isAdmin() && isValidRole(request.resource.data);
+    }
+  }
+}

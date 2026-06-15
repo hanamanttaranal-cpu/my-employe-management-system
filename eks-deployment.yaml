@@ -1,0 +1,248 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ems-prod
+
+---
+# 1. ConfigMap for Common Environment Constants
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ems-config
+  namespace: ems-prod
+data:
+  MYSQL_DATABASE: "employee_db"
+  MYSQL_USER: "ems_user"
+  BACKEND_URL: "http://ems-backend-svc:8080/api/"
+
+---
+# 2. Kubernetes Secrets (Safeguards credentials without hardcoding in manifests)
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ems-secrets
+  namespace: ems-prod
+type: Opaque
+data:
+  # Base64 encoded values for passwords: 
+  # 'supersecure_root_pass_997' -> c3VwZXJzZWN1cmVfcm9vdF9wYXNzXzk5Nw==
+  # 'secure_ems_pass_312' -> c2VjdXJlX2Vtc19wYXNzXzMxMg==
+  # '12345' -> MTIzNDU=
+  MYSQL_ROOT_PASSWORD: c3VwZXJzZWN1cmVfcm9vdF9wYXNzXzk5Nw==
+  MYSQL_PASSWORD: c2VjdXJlX2Vtc19wYXNzXzMxMg==
+  ADMIN_PASSWORD: MTIzNDU=
+
+---
+# 3. Persistent Volume Claims for AWS EBS Database volumes
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mysql-pv-claim
+  namespace: ems-prod
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+
+---
+# 4. MySQL EKS Stateful Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ems-mysql
+  namespace: ems-prod
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ems-mysql
+  template:
+    metadata:
+      labels:
+        app: ems-mysql
+    spec:
+      containers:
+        - name: mysql
+          image: mysql:8.0
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: ems-secrets
+                  key: MYSQL_ROOT_PASSWORD
+            - name: MYSQL_DATABASE
+              valueFrom:
+                configMapKeyRef:
+                  name: ems-config
+                  key: MYSQL_DATABASE
+            - name: MYSQL_USER
+              valueFrom:
+                configMapKeyRef:
+                  name: ems-config
+                  key: MYSQL_USER
+            - name: MYSQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: ems-secrets
+                  key: MYSQL_PASSWORD
+          ports:
+            - containerPort: 3306
+              name: mysql
+          volumeMounts:
+            - name: mysql-persistent-storage
+              mountPath: /var/lib/mysql
+          livenessProbe:
+            exec:
+              command: ["mysqladmin", "ping", "-h", "localhost"]
+            initialDelaySeconds: 30
+            periodSeconds: 10
+      volumes:
+        - name: mysql-persistent-storage
+          persistentVolumeClaim:
+            claimName: mysql-pv-claim
+
+---
+# 5. Internal Cluster Routing Service for MySQL
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql-db
+  namespace: ems-prod
+spec:
+  ports:
+    - port: 3306
+  selector:
+    app: ems-mysql
+
+---
+# 6. Java Spring Boot Backend Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ems-backend-deploy
+  namespace: ems-prod
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: ems-backend
+  template:
+    metadata:
+      labels:
+        app: ems-backend
+    spec:
+      containers:
+        - name: backend
+          image: ems-backend:latest
+          ports:
+            - containerPort: 8080
+          env:
+            - name: SPRING_DATASOURCE_URL
+              value: "jdbc:mysql://mysql-db:3306/employee_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC"
+            - name: SPRING_DATASOURCE_USERNAME
+              valueFrom:
+                configMapKeyRef:
+                  name: ems-config
+                  key: MYSQL_USER
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: ems-secrets
+                  key: MYSQL_PASSWORD
+            - name: ADMIN_EMAIL
+              value: "myname@1.com"
+            - name: ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: ems-secrets
+                  key: ADMIN_PASSWORD
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "512Mi"
+            limits:
+              cpu: "500m"
+              memory: "1Gi"
+          readinessProbe:
+            httpGet:
+              path: /api/employees
+              port: 8080
+            initialDelaySeconds: 40
+            periodSeconds: 15
+
+---
+# 7. Internal Service for Spring API Upstream Core
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend
+  namespace: ems-prod
+spec:
+  ports:
+    - port: 8080
+      targetPort: 8080
+  selector:
+    app: ems-backend
+
+---
+# 8. React Nginx Frontend Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ems-frontend-deploy
+  namespace: ems-prod
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: ems-frontend
+  template:
+    metadata:
+      labels:
+        app: ems-frontend
+    spec:
+      containers:
+        - name: frontend
+          image: ems-frontend:latest
+          ports:
+            - containerPort: 80
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "250m"
+              memory: "256Mi"
+
+---
+# 9. LoadBalancer Service for External EKS Access
+apiVersion: v1
+kind: Service
+metadata:
+  name: ems-public-entry
+  namespace: ems-prod
+spec:
+  type: LoadBalancer
+  ports:
+    - port: 80
+      targetPort: 80
+  selector:
+    app: ems-frontend
+
+---
+# 10. Horizontal Pod Autoscaler for Auto-Scaling Frontends during high traffic
+apiVersion: autoscaling/v1
+kind: HorizontalPodAutoscaler
+metadata:
+  name: ems-frontend-hpa
+  namespace: ems-prod
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: ems-frontend-deploy
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70

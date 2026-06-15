@@ -1,0 +1,44 @@
+{
+  "entities": {
+    "user": {
+      "title": "User",
+      "description": "Represents an employee or administrator in the system.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "The unique Firebase Auth UID of the user." },
+        "name": { "type": "string", "description": "Full name of the employee." },
+        "email": { "type": "string", "description": "Email address of the employee." },
+        "role": { "type": "string", "description": "Selected role (e.g. Employee, Manager, Developer, Admin)." },
+        "salary": { "type": "number", "description": "Salary amount." },
+        "salaryStatus": { "type": "string", "enum": ["Paid", "Pending", "Processing"], "description": "Status of the current salary credit." },
+        "statusDate": { "type": "string", "format": "date-time", "description": "Timestamp of the last status change." },
+        "joinedAt": { "type": "string", "format": "date-time", "description": "The date the employee joined." },
+        "isAdmin": { "type": "boolean", "description": "Flag indicating if the user is an administrator." }
+      },
+      "required": ["uid", "name", "email", "role", "salary", "salaryStatus"]
+    },
+    "role": {
+      "title": "Role",
+      "description": "A customized job role in the organization.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Short code or unique string identifier for the role." },
+        "roleName": { "type": "string", "description": "The display name of the role." },
+        "description": { "type": "string", "description": "Detailed description of the responsibilities." },
+        "createdBy": { "type": "string", "description": "UID of the admin who created the role." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Timestamp when this role was created." }
+      },
+      "required": ["id", "roleName", "createdAt"]
+    }
+  },
+  "firestore": {
+    "users/{userId}": {
+      "schema": "user",
+      "description": "Secure storage of employee and admin profile data."
+    },
+    "roles/{roleId}": {
+      "schema": "role",
+      "description": "Customizable roles defined by administrators."
+    }
+  }
+}

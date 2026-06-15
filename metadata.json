@@ -1,0 +1,6 @@
+{
+  "name": "Employee Management System",
+  "description": "Enterprise-grade employee portal, custom role creator, and payroll management dashboard with live Firebase integration and exported JVM/DevOps assets.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
