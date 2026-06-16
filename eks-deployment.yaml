@@ -13,7 +13,7 @@ metadata:
 data:
   MYSQL_DATABASE: "employee_db"
   MYSQL_USER: "ems_user"
-  BACKEND_URL: "http://ems-backend-svc:8080/api/"
+  BACKEND_URL: "http://ems-backend-svc:8085/api/"
 
 ---
 # 2. Kubernetes Secrets (Safeguards credentials without hardcoding in manifests)
@@ -137,7 +137,7 @@ spec:
         - name: backend
           image: ems-backend:latest
           ports:
-            - containerPort: 8080
+            - containerPort: 8085
           env:
             - name: SPRING_DATASOURCE_URL
               value: "jdbc:mysql://mysql-db:3306/employee_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC"
@@ -168,7 +168,7 @@ spec:
           readinessProbe:
             httpGet:
               path: /api/employees
-              port: 8080
+              port: 8085
             initialDelaySeconds: 40
             periodSeconds: 15
 
@@ -181,8 +181,8 @@ metadata:
   namespace: ems-prod
 spec:
   ports:
-    - port: 8080
-      targetPort: 8080
+    - port: 8085
+      targetPort: 8085
   selector:
     app: ems-backend
 

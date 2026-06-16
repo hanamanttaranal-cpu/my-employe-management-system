@@ -58,7 +58,7 @@ services:
     container_name: ems-java-backend
     restart: unless-stopped
     ports:
-      - "\${BACKEND_PORT:-8080}:8080"
+      - "\${BACKEND_PORT:-8085}:8085"
     environment:
       - SPRING_DATASOURCE_URL=jdbc:mysql://mysql-db:3306/\${MYSQL_DATABASE:-employee_db}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
       - SPRING_DATASOURCE_USERNAME=\${MYSQL_USER:-ems_user}
@@ -114,7 +114,7 @@ RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 USER appuser
 
 COPY --from=build /app/target/*.jar app.jar
-EXPOSE 8080
+EXPOSE 8085
 
 ENTRYPOINT ["java", "-jar", "app.jar"]`
   },
@@ -153,7 +153,7 @@ CMD ["nginx", "-g", "daemon off;"]`
     }
 
     location /api/ {
-        proxy_pass http://backend:8080/api/;
+        proxy_pass http://backend:8085/api/;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection 'upgrade';
@@ -249,7 +249,7 @@ metadata:
 data:
   MYSQL_DATABASE: "employee_db"
   MYSQL_USER: "ems_user"
-  BACKEND_URL: "http://ems-backend-svc:8080/api/"
+  BACKEND_URL: "http://ems-backend-svc:8085/api/"
 ---
 apiVersion: v1
 kind: Secret
@@ -315,7 +315,7 @@ spec:
       containers:
         - name: backend
           image: ems-backend:latest
-          ports: [{ containerPort: 8080 }]
+          ports: [{ containerPort: 8085 }]
           env:
             - name: SPRING_DATASOURCE_URL
               value: "jdbc:mysql://mysql-db:3306/employee_db"
@@ -328,7 +328,7 @@ metadata:
   name: backend
   namespace: ems-prod
 spec:
-  ports: [{ port: 8080, targetPort: 8080 }]
+  ports: [{ port: 8085, targetPort: 8085 }]
   selector: { app: ems-backend }
 ---
 apiVersion: v1
