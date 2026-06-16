@@ -36,10 +36,10 @@ services:
     ports:
       - "\${DB_HOST_PORT:-3306}:3306"
     environment:
-      MYSQL_ROOT_PASSWORD: \${MYSQL_ROOT_PASSWORD}
+      MYSQL_ROOT_PASSWORD: \${MYSQL_ROOT_PASSWORD:-supersecure_root_pass_997}
       MYSQL_DATABASE: \${MYSQL_DATABASE:-employee_db}
       MYSQL_USER: \${MYSQL_USER:-ems_user}
-      MYSQL_PASSWORD: \${MYSQL_PASSWORD}
+      MYSQL_PASSWORD: \${MYSQL_PASSWORD:-secure_ems_pass_312}
     volumes:
       - mysql-data:/var/lib/mysql
     networks:
@@ -62,7 +62,7 @@ services:
     environment:
       - SPRING_DATASOURCE_URL=jdbc:mysql://mysql-db:3306/\${MYSQL_DATABASE:-employee_db}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
       - SPRING_DATASOURCE_USERNAME=\${MYSQL_USER:-ems_user}
-      - SPRING_DATASOURCE_PASSWORD=\${MYSQL_PASSWORD}
+      - SPRING_DATASOURCE_PASSWORD=\${MYSQL_PASSWORD:-secure_ems_pass_312}
       - SPRING_JPA_HIBERNATE_DDL_AUTO=update
       - ADMIN_EMAIL=\${ADMIN_EMAIL:-myname@1.com}
       - ADMIN_PASSWORD=\${ADMIN_PASSWORD:-12345}
