@@ -34,12 +34,12 @@ services:
     container_name: ems-mysql-db
     restart: unless-stopped
     ports:
-      - "\${DB_HOST_PORT:-3306}:3306"
+      - "\${DB_HOST_PORT}:3306"
     environment:
-      MYSQL_ROOT_PASSWORD: \${MYSQL_ROOT_PASSWORD:-supersecure_root_pass_997}
-      MYSQL_DATABASE: \${MYSQL_DATABASE:-employee_db}
-      MYSQL_USER: \${MYSQL_USER:-ems_user}
-      MYSQL_PASSWORD: \${MYSQL_PASSWORD:-secure_ems_pass_312}
+      MYSQL_ROOT_PASSWORD: \${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: \${MYSQL_DATABASE}
+      MYSQL_USER: \${MYSQL_USER}
+      MYSQL_PASSWORD: \${MYSQL_PASSWORD}
     volumes:
       - mysql-data:/var/lib/mysql
     networks:
@@ -58,14 +58,14 @@ services:
     container_name: ems-java-backend
     restart: unless-stopped
     ports:
-      - "\${BACKEND_PORT:-8085}:8085"
+      - "\${BACKEND_PORT}:8085"
     environment:
-      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql-db:3306/\${MYSQL_DATABASE:-employee_db}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
-      - SPRING_DATASOURCE_USERNAME=\${MYSQL_USER:-ems_user}
-      - SPRING_DATASOURCE_PASSWORD=\${MYSQL_PASSWORD:-secure_ems_pass_312}
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql-db:3306/\${MYSQL_DATABASE}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      - SPRING_DATASOURCE_USERNAME=\${MYSQL_USER}
+      - SPRING_DATASOURCE_PASSWORD=\${MYSQL_PASSWORD}
       - SPRING_JPA_HIBERNATE_DDL_AUTO=update
-      - ADMIN_EMAIL=\${ADMIN_EMAIL:-myname@1.com}
-      - ADMIN_PASSWORD=\${ADMIN_PASSWORD:-12345}
+      - ADMIN_EMAIL=\${ADMIN_EMAIL}
+      - ADMIN_PASSWORD=\${ADMIN_PASSWORD}
     depends_on:
       mysql-db:
         condition: service_healthy
@@ -80,7 +80,7 @@ services:
     container_name: ems-nginx-frontend
     restart: unless-stopped
     ports:
-      - "\${FRONTEND_PORT:-80}:80"
+      - "\${FRONTEND_PORT}:80"
     depends_on:
       - backend
     networks:
