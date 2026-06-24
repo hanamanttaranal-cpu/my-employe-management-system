@@ -24,3 +24,5 @@ Built custom Grafana dashboards to provide real-time visualization of container 
 
 
 images 
+https://github.com/hanamanttaranal-cpu/my-employe-management-system/edit/main/README.md
+https://github.com/hanamanttaranal-cpu/my-employe-management-system/blob/f3cb9dcc60e957e7a7045ecead6646ea50ef968d/images/Screenshot%202026-06-16%20223715.png
